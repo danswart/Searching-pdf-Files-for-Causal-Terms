@@ -1,0 +1,81 @@
+---
+title: "pdftools"
+format: html
+---
+
+
+```{r}
+require(pdftools)
+require(tidyverse)
+require(ggplot2)
+
+# download pdf and load file
+url <- c("pdf input/2023-RDA Data Dictionary.pdf")
+raw_text <- purrr::map(url, pdftools::pdf_text)
+
+# function to scrape data and clean
+clean_table1 <- function(raw) {
+  # Split the single pages
+  raw <- purrr::map(raw, ~ str_split(.x, "\\n") %>% unlist())
+  # Concatenate the split pages
+  raw <- purrr::reduce(raw, c)
+
+  # specify the start and end of the table data
+  table_start <- stringr::str_which(tolower(raw), "variable")
+  table_end <- stringr::str_which(tolower(raw), "S_TOTREMS_Z23")
+  table_end <- table_end[min(which(table_end > table_start))]
+
+  # Build the table  and remove special characters
+  table <- raw[(table_start):(table_end)]
+  table <- stringr::str_replace_all(table, "\\s{2,}", "|")
+  text_con <- textConnection(table)
+  data_table <- read.csv(text_con, sep = "|")
+
+  # Create a list of column names
+  colnames(data_table) <- c("Variable", "Type", "Len", "Label")
+  data_table
+}
+
+results <- map_df(raw_text, clean_table1)
+head(results)
+TestDF <- data.frame(results)
+TestDF <- TestDF[-c(1)]
+
+
+
+```
+
+```{r}
+require(pdftools)
+require(tidyverse)
+require(ggplot2)
+
+# download pdf and load file
+url <- c("pdf input/2023-RDA Data Dictionary.pdf")
+raw_text <- purrr::map(url, pdftools::pdf_text)
+
+# Split the single pages
+raw <- purrr::map(raw_text, ~ str_split(.x, "\\n") %>% unlist())
+raw <- purrr::reduce(raw, c)
+
+# specify the start and end of the table data
+table_start <- stringr::str_which(tolower(raw), "variable")
+table_end <- stringr::str_which(tolower(raw), "S_TOTREMS_Z23")
+table_end <- table_end[min(which(table_end > table_start))]
+
+# Build the table and remove special characters
+table <- raw[(table_start):(table_end)]
+table <- stringr::str_replace_all(table, "\\s{2,}", "|")
+text_con <- textConnection(table)
+data_table <- read.csv(text_con, sep = "|")
+
+# Create a list of column names
+colnames(data_table) <- c("Variable", "Type", "Len", "Label")
+
+results <- data_table
+head(results)
+TestDF <- data.frame(results)
+TestDF <- TestDF[-c(1)]
+
+```
+
