@@ -1,0 +1,473 @@
+---
+title: "Causal Language Analysis Report"
+subtitle: "Analysis of Causal vs. Noncausal Terms in Research Document"
+author: "Your Name"
+date: today
+date-format: long
+format:
+  html:
+    code-fold: true
+    code-tools: true
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    theme: cosmo
+    embed-resources: true
+    df-print: paged
+execute:
+  echo: true
+  message: false
+  warning: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+# Set options
+base::options(scipen = 999)
+
+# Set seed for reproducibility
+base::set.seed(123)
+```
+
+# Document Information
+
+This report analyzes the frequency of causal and noncausal language in research documents, providing insights into the rhetorical approach used by the authors.
+
+```{r}
+#| label: load-libraries
+#| message: false
+
+# Load necessary libraries - commented out, using namespace syntax instead
+# library(tidyverse)
+# library(pdftools)
+# library(rjson)
+# library(jsonlite)
+# library(flextable)
+# library(ggplot2)
+```
+
+# Configuration
+
+```{r}
+#| label: configuration
+
+# Define the path to your PDF file
+pdf_input_path <- "pdf input/Lorentzen-The Relationship Between School Board Governance Behaviors and St2.pdf"
+
+# Define paths to glossary files
+causal_glossary_path <- 'glossaries/glossary_causal_terms.json'
+noncausal_glossary_path <- 'glossaries/glossary_noncausal_terms.json'
+```
+
+# Data Extraction
+
+## Read PDF Content
+
+```{r}
+#| label: read-pdf
+
+# Read the text content of the PDF file
+pdf_text <- pdftools::pdf_text(pdf_input_path) |>
+  base::tolower()  # Convert text to lowercase for case-insensitive search
+
+# Display first few characters
+base::cat("PDF successfully loaded.\n")
+base::cat("Number of pages:", base::length(pdf_text), "\n")
+base::cat("Sample text (first 200 characters):\n")
+base::cat(base::substr(pdf_text[1], 1, 200), "...\n")
+```
+
+## Load Search Term Glossaries
+
+```{r}
+#| label: load-glossaries
+
+# Load the causal search terms from the JSON file
+causal_terms_glossary <- jsonlite::fromJSON(causal_glossary_path)
+
+# Load the noncausal search terms from the JSON file
+noncausal_terms_glossary <- jsonlite::fromJSON(noncausal_glossary_path)
+
+# Display counts
+base::cat("Causal terms in glossary:", base::length(causal_terms_glossary), "\n")
+base::cat("Noncausal terms in glossary:", base::length(noncausal_terms_glossary), "\n")
+```
+
+# Term Frequency Analysis
+
+## Define Counting Function
+
+```{r}
+#| label: counting-function
+
+# Function to count occurrences of whole words in text
+count_terms_in_text <- function(term) {
+  pattern <- base::paste0('\\b', term, '\\b')
+  base::sum(stringr::str_count(pdf_text, stringr::regex(pattern, ignore_case = TRUE)))
+}
+```
+
+## Count Causal Terms
+
+```{r}
+#| label: count-causal-terms
+
+# Map the counting function over causal search terms
+causal_term_counts <- purrr::map_int(causal_terms_glossary, count_terms_in_text)
+
+# Combine causal search terms and their counts into a tibble
+causal_term_counts_df <- tibble::tibble(
+  term = causal_terms_glossary, 
+  count = causal_term_counts
+) |>
+  dplyr::arrange(dplyr::desc(count))
+
+# Display summary
+base::cat("Total causal term occurrences:", base::sum(causal_term_counts_df$count), "\n")
+base::cat("Unique causal terms found:", base::sum(causal_term_counts_df$count > 0), "\n")
+```
+
+## Count Noncausal Terms
+
+```{r}
+#| label: count-noncausal-terms
+
+# Map the counting function over noncausal search terms
+noncausal_term_counts <- purrr::map_int(noncausal_terms_glossary, count_terms_in_text)
+
+# Combine noncausal search terms and their counts into a tibble
+noncausal_term_counts_df <- tibble::tibble(
+  term = noncausal_terms_glossary, 
+  count = noncausal_term_counts
+) |>
+  dplyr::arrange(dplyr::desc(count))
+
+# Display summary
+base::cat("Total noncausal term occurrences:", base::sum(noncausal_term_counts_df$count), "\n")
+base::cat("Unique noncausal terms found:", base::sum(noncausal_term_counts_df$count > 0), "\n")
+```
+
+# Overall Statistics
+
+## Calculate Document-Wide Percentages
+
+```{r}
+#| label: calculate-percentages
+
+# Convert pdf_text to a single string
+pdf_text_combined <- base::tolower(base::paste(pdf_text, collapse = " "))
+
+# Calculate total words
+total_words <- stringr::str_count(pdf_text_combined, stringr::boundary("word"))
+
+# Calculate occurrences of each causal search term and sum them
+causal_terms_total_occurrences <- base::sum(base::sapply(causal_terms_glossary, function(term) {
+  pattern <- base::paste0('\\b', term, '\\b')
+  base::sum(stringr::str_count(pdf_text_combined, stringr::regex(pattern, ignore_case = TRUE)))
+}))
+
+# Calculate occurrences of each noncausal search term and sum them
+noncausal_terms_total_occurrences <- base::sum(base::sapply(noncausal_terms_glossary, function(term) {
+  pattern <- base::paste0('\\b', term, '\\b')
+  base::sum(stringr::str_count(pdf_text_combined, stringr::regex(pattern, ignore_case = TRUE)))
+}))
+
+# Calculate the percentage of causal terms in document
+causal_percentage <- (causal_terms_total_occurrences / total_words) * 100
+
+# Calculate the percentage of noncausal terms in document
+noncausal_percentage <- (noncausal_terms_total_occurrences / total_words) * 100
+```
+
+## Summary Statistics Table
+
+```{r}
+#| label: summary-table
+#| tbl-cap: "Document-Wide Language Analysis Summary"
+
+# Create summary data frame
+summary_stats <- base::data.frame(
+  Metric = base::c(
+    "Total Words in Document",
+    "Causal Terms (Total Occurrences)",
+    "Noncausal Terms (Total Occurrences)",
+    "Causal Terms (% of Total Words)",
+    "Noncausal Terms (% of Total Words)",
+    "Ratio (Causal:Noncausal)"
+  ),
+  Value = base::c(
+    base::format(total_words, big.mark = ","),
+    base::format(causal_terms_total_occurrences, big.mark = ","),
+    base::format(noncausal_terms_total_occurrences, big.mark = ","),
+    base::paste0(base::round(causal_percentage, 2), "%"),
+    base::paste0(base::round(noncausal_percentage, 2), "%"),
+    base::round(causal_percentage / noncausal_percentage, 2)
+  )
+)
+
+# Create flextable
+ft_summary <- flextable::flextable(summary_stats) |>
+  flextable::set_header_labels(
+    Metric = "Metric",
+    Value = "Value"
+  ) |>
+  flextable::theme_booktabs() |>
+  flextable::autofit() |>
+  flextable::bold(j = 1) |>
+  flextable::bg(i = ~ Metric %in% base::c("Causal Terms (% of Total Words)", 
+                                           "Noncausal Terms (% of Total Words)"),
+                bg = "#FFF9E6") |>
+  flextable::align(j = 2, align = "right", part = "all")
+
+ft_summary
+```
+
+# Detailed Term Counts
+
+## Top Causal Terms
+
+```{r}
+#| label: top-causal-terms
+#| tbl-cap: "Most Frequent Causal Terms"
+
+# Filter to terms with at least 1 occurrence
+causal_top <- causal_term_counts_df |>
+  dplyr::filter(count > 0) |>
+  dplyr::mutate(
+    percentage = base::round((count / base::sum(count)) * 100, 1),
+    cumulative_pct = base::round(base::cumsum(percentage), 1)
+  )
+
+# Create flextable for top 20 causal terms
+ft_causal <- flextable::flextable(utils::head(causal_top, 20)) |>
+  flextable::set_header_labels(
+    term = "Causal Term",
+    count = "Count",
+    percentage = "% of Causal Terms",
+    cumulative_pct = "Cumulative %"
+  ) |>
+  flextable::theme_booktabs() |>
+  flextable::autofit() |>
+  flextable::align(j = 2:4, align = "right", part = "all") |>
+  flextable::bg(i = ~ count >= 10, bg = "#E8F4F8") |>
+  flextable::bold(i = 1, part = "all")
+
+ft_causal
+```
+
+## Top Noncausal Terms
+
+```{r}
+#| label: top-noncausal-terms
+#| tbl-cap: "Most Frequent Noncausal Terms"
+
+# Filter to terms with at least 1 occurrence
+noncausal_top <- noncausal_term_counts_df |>
+  dplyr::filter(count > 0) |>
+  dplyr::mutate(
+    percentage = base::round((count / base::sum(count)) * 100, 1),
+    cumulative_pct = base::round(base::cumsum(percentage), 1)
+  )
+
+# Create flextable for top 20 noncausal terms
+ft_noncausal <- flextable::flextable(utils::head(noncausal_top, 20)) |>
+  flextable::set_header_labels(
+    term = "Noncausal Term",
+    count = "Count",
+    percentage = "% of Noncausal Terms",
+    cumulative_pct = "Cumulative %"
+  ) |>
+  flextable::theme_booktabs() |>
+  flextable::autofit() |>
+  flextable::align(j = 2:4, align = "right", part = "all") |>
+  flextable::bg(i = ~ count >= 10, bg = "#FFF4E6") |>
+  flextable::bold(i = 1, part = "all")
+
+ft_noncausal
+```
+
+# Visualizations
+
+## Comparison Bar Chart
+
+```{r}
+#| label: comparison-chart
+#| fig-cap: "Causal vs. Noncausal Language Usage"
+#| fig-width: 10
+#| fig-height: 6
+
+# Create comparison data
+comparison_data <- base::data.frame(
+  Category = base::c("Causal Terms", "Noncausal Terms"),
+  Percentage = base::c(causal_percentage, noncausal_percentage),
+  Count = base::c(causal_terms_total_occurrences, noncausal_terms_total_occurrences)
+)
+
+# Create bar chart
+p_comparison <- ggplot2::ggplot(comparison_data, 
+                                 ggplot2::aes(x = Category, y = Percentage, fill = Category)) +
+  ggplot2::geom_col(width = 0.6, alpha = 0.8) +
+  ggplot2::geom_text(ggplot2::aes(label = base::paste0(base::round(Percentage, 2), "%\n(n=", Count, ")")),
+                     vjust = -0.5, size = 5, fontface = "bold") +
+  ggplot2::scale_fill_manual(values = base::c("Causal Terms" = "#4A90E2", 
+                                               "Noncausal Terms" = "#E89C4A")) +
+  ggplot2::labs(
+    title = "Percentage of Document Devoted to Causal vs. Noncausal Language",
+    subtitle = base::paste("Total words in document:", base::format(total_words, big.mark = ",")),
+    x = NULL,
+    y = "Percentage of Total Words (%)"
+  ) +
+  ggplot2::theme_minimal(base_size = 14) +
+  ggplot2::theme(
+    legend.position = "none",
+    plot.title = ggplot2::element_text(face = "bold", size = 16),
+    plot.subtitle = ggplot2::element_text(size = 12),
+    axis.text.x = ggplot2::element_text(face = "bold", size = 12)
+  ) +
+  ggplot2::ylim(0, base::max(comparison_data$Percentage) * 1.2)
+
+p_comparison
+```
+
+## Top Terms Comparison
+
+```{r}
+#| label: top-terms-comparison
+#| fig-cap: "Top 10 Most Frequent Terms by Category"
+#| fig-width: 12
+#| fig-height: 8
+
+# Prepare top 10 from each category
+top_causal <- causal_term_counts_df |>
+  dplyr::filter(count > 0) |>
+  utils::head(10) |>
+  dplyr::mutate(category = "Causal")
+
+top_noncausal <- noncausal_term_counts_df |>
+  dplyr::filter(count > 0) |>
+  utils::head(10) |>
+  dplyr::mutate(category = "Noncausal")
+
+# Combine
+top_combined <- dplyr::bind_rows(top_causal, top_noncausal)
+
+# Create faceted bar chart
+p_top_terms <- ggplot2::ggplot(top_combined, 
+                                ggplot2::aes(x = stats::reorder(term, count), y = count, fill = category)) +
+  ggplot2::geom_col(alpha = 0.8) +
+  ggplot2::geom_text(ggplot2::aes(label = count), hjust = -0.3, size = 3.5) +
+  ggplot2::coord_flip() +
+  ggplot2::facet_wrap(~ category, scales = "free_y") +
+  ggplot2::scale_fill_manual(values = base::c("Causal" = "#4A90E2", 
+                                               "Noncausal" = "#E89C4A")) +
+  ggplot2::labs(
+    title = "Top 10 Most Frequent Terms in Each Category",
+    x = NULL,
+    y = "Frequency Count"
+  ) +
+  ggplot2::theme_minimal(base_size = 12) +
+  ggplot2::theme(
+    legend.position = "none",
+    plot.title = ggplot2::element_text(face = "bold", size = 14),
+    strip.text = ggplot2::element_text(face = "bold", size = 12),
+    panel.grid.major.y = ggplot2::element_blank()
+  )
+
+p_top_terms
+```
+
+# Complete Term Lists
+
+## All Causal Terms (with occurrences)
+
+```{r}
+#| label: all-causal-terms
+#| tbl-cap: "Complete List of Causal Terms Found in Document"
+
+# Filter to only terms found in document
+all_causal_found <- causal_term_counts_df |>
+  dplyr::filter(count > 0)
+
+ft_all_causal <- flextable::flextable(all_causal_found) |>
+  flextable::set_header_labels(
+    term = "Causal Term",
+    count = "Occurrences"
+  ) |>
+  flextable::theme_booktabs() |>
+  flextable::autofit() |>
+  flextable::align(j = 2, align = "right", part = "all") |>
+  flextable::bg(i = ~ count >= stats::median(count), bg = "#F0F8FF")
+
+ft_all_causal
+```
+
+## All Noncausal Terms (with occurrences)
+
+```{r}
+#| label: all-noncausal-terms
+#| tbl-cap: "Complete List of Noncausal Terms Found in Document"
+
+# Filter to only terms found in document
+all_noncausal_found <- noncausal_term_counts_df |>
+  dplyr::filter(count > 0)
+
+ft_all_noncausal <- flextable::flextable(all_noncausal_found) |>
+  flextable::set_header_labels(
+    term = "Noncausal Term",
+    count = "Occurrences"
+  ) |>
+  flextable::theme_booktabs() |>
+  flextable::autofit() |>
+  flextable::align(j = 2, align = "right", part = "all") |>
+  flextable::bg(i = ~ count >= stats::median(count), bg = "#FFFAF0")
+
+ft_all_noncausal
+```
+
+# Interpretation
+
+## Key Findings
+
+Based on this analysis:
+
+1. **Overall Language Balance**: The document uses **`r round(causal_percentage, 2)`%** causal language and **`r round(noncausal_percentage, 2)`%** noncausal language.
+
+2. **Dominant Language Type**: `r if(causal_percentage > noncausal_percentage) "Causal language predominates" else "Noncausal language predominates"`, with a ratio of **`r round(causal_percentage / noncausal_percentage, 2)`:1**.
+
+3. **Most Common Causal Term**: "**`r causal_term_counts_df$term[1]`**" appears **`r causal_term_counts_df$count[1]`** times.
+
+4. **Most Common Noncausal Term**: "**`r noncausal_term_counts_df$term[1]`**" appears **`r noncausal_term_counts_df$count[1]`** times.
+
+5. **Vocabulary Diversity**: 
+   - **`r sum(causal_term_counts_df$count > 0)`** unique causal terms found
+   - **`r sum(noncausal_term_counts_df$count > 0)`** unique noncausal terms found
+
+## Implications
+
+This analysis reveals the rhetorical stance of the document. A higher proportion of:
+
+- **Causal language** suggests claims about cause-and-effect relationships, mechanisms, or explanatory frameworks
+- **Noncausal language** suggests more descriptive, correlational, or associative claims
+
+The balance between these language types can indicate whether the research emphasizes:
+- Strong causal claims vs. more tentative associations
+- Explanatory mechanisms vs. observed patterns
+- Intervention effects vs. descriptive relationships
+
+# Appendix
+
+## Session Information
+
+```{r}
+#| label: session-info
+
+utils::sessionInfo()
+```
+
+## File Paths Used
+
+- **PDF Input**: `r pdf_input_path`
+- **Causal Glossary**: `r causal_glossary_path`
+- **Noncausal Glossary**: `r noncausal_glossary_path`
