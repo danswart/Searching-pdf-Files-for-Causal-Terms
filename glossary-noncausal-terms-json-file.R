@@ -11,13 +11,11 @@
 #####                    MUST BE KEPT UP TO DATE                         #####
 ##############################################################################
 
-
 #########################################################################
 #####     I USE THE PYTHON SCRIPTS TO ANNOTATE PDF FILES WITH       #####
 #####  HIGHLIGHTING AND UNDERLINING THE CAUSAL AND NONCAUSAL TERMS  #####
 #####       SO THIS JSON FILE OF TERMS MUST BE KEPT UP TO DATE       #####
 #########################################################################
-
 
 # load libraries
 
@@ -28,10 +26,10 @@ library(jsonlite)
 
 # Load noncausal_terms RData character vector ONLY AFTER updating it with R script named 'Add-Remove terms in noncausal_terms vector.R
 
-load("data/noncausal_terms.RData") # contains most recent causal_terms character vector
+load("Rdata/noncausal_terms.RData") # contains most recent causal_terms character vector
 
 # and sort alphabetically
-noncausal_terms  <- sort(unique(noncausal_terms))
+noncausal_terms <- sort(unique(noncausal_terms))
 
 
 # Convert the list to JSON format
@@ -42,15 +40,10 @@ glossary_noncausal_terms <- toJSON(noncausal_terms)
 write(glossary_noncausal_terms, "glossaries/glossary_noncausal_terms.json")
 
 
-
-
-
 #####  LOADING THE JSON FILE  #####
 
 # Load the search terms from the JSON file
 noncausal_terms_glossary <- fromJSON('glossaries/glossary_noncausal_terms.json')
-
-
 
 ######################################################################
 ##### THERE ARE TWO WAYS TO ADD/REMOVE TERMS TO/FROM JSON FILE   #####
@@ -59,27 +52,19 @@ noncausal_terms_glossary <- fromJSON('glossaries/glossary_noncausal_terms.json')
 #####  OR, USE CODE BELOW TO ADD/REMOVE TERMS TO/FROM JSON FILE  #####
 ######################################################################
 
-
-# Example: Add a new term to noncausal terms 
+# Example: Add a new term to noncausal terms
 # noncausal_terms_glossary <- c(noncausal_terms_glossary, 'NEW NONCAUSAL TERM')
-
 
 # and sort alphabetically
 # noncausal_terms_glossary <- sort(unique(noncausal_terms_glossary))
-
 
 # Save the updated search terms back to the JSON file
 
 # write(toJSON(noncausal_terms_glossary, pretty = TRUE), 'glossaries/glossary_noncausal_terms.json')
 
-
-
-
 ####################################@@########################
 #####  REMOVING A NONCAUSAL SEARCH TERMS FROM JSON FILE  #####
 ##############################################################
-
-
 
 # Read the JSON file into R
 
@@ -94,18 +79,3 @@ noncausal_terms_glossary <- fromJSON('glossaries/glossary_noncausal_terms.json')
 # Save the updated search terms back to the JSON file
 
 # write(toJSON(noncausal_terms_glossary, pretty = TRUE), json_file_path)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
